@@ -7,12 +7,17 @@ namespace AIShadersPatcher
 {
     class Program
     {
-        static string _pattern1 = @"float4 SourceResolution : packoffset";
-        static string _pattern2 = @"r(\d)\.xy = float2\(0\.00100000005,0\.00100000005\) \* v(\d)\.xy;" + "\n" + @"\s+" + @"r(\d)\.zw = v(\d)\.xy \* float2\(0\.00100000005,0\.00100000005\) \+ -v(\d)\.xx;";
+        static Regex _regexSourceResolutionPattern = new Regex(@"float4 SourceResolution : packoffset");
+        static Regex _regexCodePattern = new Regex(@"r(\d)\.(\w{2}) = float2\(0\.00100000005,0\.00100000005\) \* v(\d)\.xy;" + "\r?\n" + @"\s+" + @"r(\d)\.(\w{2}) = v(\d)\.xy \* float2\(0\.00100000005,0\.00100000005\) \+ -v(\d)\.xx;");
 
-        static string _template = @"float2 normalizedCoords = v{2}.xy / SourceResolution.xy;
-  r{1}.xy = normalizedCoords * float2(0.001, 0.001);
-  r{1}.zw = normalizedCoords * float2(0.001, 0.001) - v{5}.xx;";
+        static string _templateSourceResolution = @"cbuffer cbDefaultPSC : register(b2)
+{
+  float4 SourceResolution : packoffset(c39);
+}";
+
+        static string _templateCode = @"float2 normalizedCoords = v{3}.xy / SourceResolution.xy;
+  r{1}.{2} = normalizedCoords * float2(0.001, 0.001);
+  r{4}.{5} = normalizedCoords * float2(0.001, 0.001) - v{7}.xx;";
 
         static string _defaultDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Data");
         static string _defaultCompilerPath = "fxc.exe";
@@ -74,9 +79,6 @@ namespace AIShadersPatcher
         {
             try
             {
-                Regex regex1 = new Regex(_pattern1);
-                Regex regex2 = new Regex(_pattern2);
-
                 foreach (string file in Directory.GetFiles(directoryPath, "LEVEL_SHADERS_DX11.PAK", SearchOption.AllDirectories))
                 {
                     Console.WriteLine("Parsing " + file);
@@ -105,31 +107,34 @@ namespace AIShadersPatcher
 
                             //Read Decompiled file and search for relevant pattern
                             string decompiledShader = File.ReadAllText(_hlslPath);
-                            Match match1 = regex1.Match(decompiledShader);
-                            Match match2 = regex2.Match(decompiledShader);
-                            if (match1.Success && match2.Success)
+                            Match match = _regexCodePattern.Match(decompiledShader);
+                            if (match.Success && match.Groups.Count == 8 && match.Groups.Values.ElementAt(3).Value == match.Groups.Values.ElementAt(6).Value)
                             {
-                                if (match2.Groups.Count == 6
-                                    && match2.Groups.Values.ElementAt(1).Value == match2.Groups.Values.ElementAt(3).Value
-                                    && match2.Groups.Values.ElementAt(2).Value == match2.Groups.Values.ElementAt(4).Value
-                                    )
+                                Match matchSourceResolution = _regexSourceResolutionPattern.Match(decompiledShader);
+                                if (!matchSourceResolution.Success)//Sometimes SourceResolution is not yet present and needs to be added first
                                 {
-                                    //Replace pattern
-                                    string replacement = _template.Replace("{1}", match2.Groups.Values.ElementAt(1).Value).Replace("{2}", match2.Groups.Values.ElementAt(2).Value).Replace("{5}", match2.Groups.Values.ElementAt(5).Value);
-                                    decompiledShader = decompiledShader.Replace(match2.Groups.Values.ElementAt(0).Value, replacement);
-
-                                    //Write patched shader hlsl to disk
-                                    File.WriteAllText(_hlslPath, decompiledShader);
-
-                                    //Recompile shader
-                                    RunExecutable(compilerPath, "/T ps_5_0 /E main /O2 /Fo " + _dxbcPath + " " + _hlslPath);
-
-                                    //Read binary data from disk and update existing shader
-                                    shader.PixelShader = File.ReadAllBytes(_dxbcPath);
-
-                                    //Update count
-                                    count++;
+                                    decompiledShader = _templateSourceResolution + decompiledShader;
                                 }
+
+                                //Replace pattern
+                                string replacement = _templateCode;
+                                for (int i = 1; i < match.Groups.Count; i++)
+                                {
+                                    replacement = replacement.Replace("{" + i + "}", match.Groups.Values.ElementAt(i).Value);
+                                }
+                                decompiledShader = decompiledShader.Replace(match.Groups.Values.ElementAt(0).Value, replacement);
+
+                                //Write patched shader hlsl to disk
+                                File.WriteAllText(_hlslPath, decompiledShader);
+
+                                //Recompile shader
+                                RunExecutable(compilerPath, "/T ps_5_0 /E main /O2 /Fo " + _dxbcPath + " " + _hlslPath);
+
+                                //Read binary data from disk and update existing shader
+                                shader.PixelShader = File.ReadAllBytes(_dxbcPath);
+
+                                //Update count
+                                count++;
                             }
                             index++;
                         }

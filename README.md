@@ -5,14 +5,19 @@ The Working Joe's Graphics Improvements and Fixes mod aims to improve or fix som
 - Remove pop-in of objects and disable LOD.
 - Fix high resolution (4k+) rendering.
 
-Both features can be installed seperately from each other and are compatible with both the flatscreen version and the MotherVR mod. The *Image Comparison* folder showcases examples of the mod's effects. Impact on performance should be minimal for modern hardware.
+Both features can be installed seperately from each other and are compatible with both the flatscreen version and the MotherVR mod. The *Image Comparison* folder showcases examples of the mod's effects. Impact on performance should be minimal for modern hardware. 
 
 **Version History**
 - v0.1.0: Alpha version.
+- v0.2.0: Improved AIShadersPatcher pattern search, will now patch additional shaders that were previously overlooked. Added Image comparison for MotherVR.
 
 ## Remove pop-in of objects and disable LOD.
 
-In the vanilla game some objects are only rendered when the player is within a certain distance of them even though they are not obscured for the player. This is not very immersive and especially in VR quite noticable. This mod removes the relevant distance check so that all objects that should be visible are rendered, no matter the distance. Additionally LOD is disabled, all objects are immediately rendered with maximum detail. 
+In the vanilla game some objects are only rendered when the player is within a certain distance of them even though they are not obscured for the player. This is not very immersive and especially in VR quite noticable. This mod removes the relevant distance check so that all objects that should be visible are rendered, no matter the distance. Additionally LOD is disabled, all objects are immediately rendered with maximum detail.
+
+**Compatibility**
+
+This feature is currently only compatible with the Steam version of Alien: Isolation. Versions on other stores (Epic, GOG etc.) are not supported at the moment.
 
 **Installation**
 
@@ -23,6 +28,10 @@ Copy *XINPUT1_3.dll* from the zip folder to the Alien: Isolation game folder. Al
 The original game was designed and optimized to render up to 4k without issues, going beyond that can cause visual glitches. This problem arises because some shader calculations assume a fixed resolution cap. This mod includes a tool that patches the game shaders to account for the actual resolution during calculations, making them resolution-independent.
 
 A special mention for [CathodeLib](https://github.com/OpenCAGE/CathodeLib). This tool uses the nuget package for unpacking and repacking the .PAK files.
+
+**Compatibility**
+
+This feature should be compatible with all versions of Alien: Isolation.
 
 **Installation**
 
